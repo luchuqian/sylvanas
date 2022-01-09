@@ -1,0 +1,16 @@
+version: '3'
+services:
+  mysql:
+    image: mysql:8.0  # 原镜像`mysql:8.0`
+    container_name: mysql8.0                                      # 容器名为'mysql8.0'
+    restart: unless-stopped
+    ports:
+      - '3306:3306'
+    volumes:
+      - D:\code-from-git-hub-in-sylvanas\docker-dev\mysql:/usr/data
+    environment:
+      TZ: Asia/Shanghai
+      LANG: en_US.UTF-8
+      MYSQL_DATABASE: dev              # 初始化的数据库名称
+      MYSQL_ROOT_PASSWORD: ''
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
