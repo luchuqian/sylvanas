@@ -1,4 +1,4 @@
-package com.sylvanas.something;
+package com.sylvanas.others;
 
 import lombok.extern.slf4j.Slf4j;
 
