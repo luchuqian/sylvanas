@@ -1,11 +1,10 @@
 package com.sylvanas.tree.iterator;
 
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
-public class PreorderTraversal {
+public class PreOrderTraversal {
 
     public static void preorderTraversal(TreeNode node, List<Integer> resultList) {
         if (node == null) {
@@ -40,14 +39,3 @@ public class PreorderTraversal {
 
 }
 
-class TreeNode {
-    public TreeNode left;
-    public TreeNode right;
-    public int val;
-
-    public TreeNode(TreeNode left, TreeNode right, int val) {
-        this.left = left;
-        this.right = right;
-        this.val = val;
-    }
-}
