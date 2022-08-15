@@ -62,7 +62,22 @@ public class HeapSort {
 
   public static void main(String[] args) {
     int[] arr = new int[]{1, 2, 3, 7, 8, 5, 4};
-    sort(arr);
+    exerciseSort(arr);
     Arrays.stream(arr).forEach(System.out::println);
   }
+
+
+  public static void exerciseSort(int[] arr) {
+    // FIXME
+  }
+
+
+  public static void exerciseBuildMaxTopHeap(int[] arr) {
+    // FIXME
+  }
+
+  private static void exerciseHeapify(int[] arr, int fatherIndex, int size) {
+    // FIXME
+  }
+
 }
