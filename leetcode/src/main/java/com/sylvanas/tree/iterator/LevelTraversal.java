@@ -31,12 +31,30 @@ public class LevelTraversal {
         return resultList;
     }
 
+    public static List<List<Integer>> levelOrderTraversalInRecursion(TreeNode node) {
+        List<List<Integer>> resultList = new ArrayList<>();
+        levelInRecursion(resultList, node, 0);
+        return resultList;
+    }
+
+    public static void levelInRecursion(List<List<Integer>> resultList, TreeNode node, int level) {
+        if (node == null) {
+            return;
+        }
+        if (resultList.size() <= level) {
+            resultList.add(new LinkedList<>());
+        }
+        resultList.get(level).add(node.val);
+        levelInRecursion(resultList, node.left, level + 1);
+        levelInRecursion(resultList, node.right, level + 1);
+    }
+
 
     public static void main(String[] args) {
         TreeNode node = new TreeNode(new TreeNode(new TreeNode(null, null, 50), new TreeNode(null, null, 23), 20),
                 new TreeNode(new TreeNode(null, null, 11), new TreeNode(null, null, 23), 77),
                 100);
-        List<List<Integer>> resultList = levelOrderTraversal(node);
+        List<List<Integer>> resultList = levelOrderTraversalInRecursion(node);
         resultList.forEach(list -> {
             list.forEach(System.out::println);
         });
