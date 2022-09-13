@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * 全排列组合
+ */
 public class Permutation {
 
     public static List<List<Integer>> permute(int[] nums) {
