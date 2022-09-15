@@ -1,6 +1,6 @@
 package com.sylvanas.tree.iterator;
 
-class TreeNode {
+public class TreeNode {
   public TreeNode left;
   public TreeNode right;
   public int val;

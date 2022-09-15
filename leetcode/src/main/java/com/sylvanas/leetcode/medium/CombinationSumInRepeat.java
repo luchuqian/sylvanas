@@ -5,16 +5,12 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-/**
- * https://leetcode.cn/problems/combination-sum-ii/
- */
-public class CombinationSum {
+public class CombinationSumInRepeat {
 
     public List<List<Integer>> combinationSum(int[] candidates, int target) {
         List<List<Integer>> resultList = new ArrayList<>();
         LinkedList<Integer> trackList = new LinkedList<>();
         int sum = 0;
-        Arrays.sort(candidates);
         backtrack(resultList, trackList, candidates, 0, sum, target);
         return resultList;
     }
@@ -32,16 +28,12 @@ public class CombinationSum {
             return;
         }
         for (int i = start; i < nums.length; i++) {
-            if (i > start && nums[i] == nums[i - 1]) {
-                continue;
-            }
             trackList.add(nums[i]);
             sum += nums[i];
-            backtrack(resultList, trackList, nums, i + 1, sum, target);
+            backtrack(resultList, trackList, nums, i, sum, target);
             trackList.removeLast();
             sum -= nums[i];
         }
     }
-
 
 }
