@@ -36,6 +36,9 @@ import java.util.*;
 public class MaxSubString {
 
     public static int lengthOfLongestSubstring(String s) {
+        if (s == null) {
+            return 0;
+        }
         if (s.length() <= 1) {
             return s.length();
         }
