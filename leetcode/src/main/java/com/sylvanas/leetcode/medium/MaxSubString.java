@@ -45,16 +45,15 @@ public class MaxSubString {
         int left = 0;
         int right = 0;
         int maxLength = 0;
-
-        Map<Character, Integer> map = new HashMap<>();
+        Map<Character, Integer> window = new HashMap<>();
         while (right < s.length()) {
-            Character character = s.charAt(right);
-            if (map.containsKey(character)) {
-                left = Math.max(left, map.get(character) + 1);
+            Character c = s.charAt(right++);
+            window.put(c, window.getOrDefault(c, 0) + 1);
+            while (window.get(c) > 1) {
+                Character d = s.charAt(left++);
+                window.put(d, window.getOrDefault(d, 0) - 1);
             }
-            map.put(character, right);
-            maxLength = Math.max(maxLength, right - left + 1);
-            right++;
+            maxLength = Math.max(maxLength, right - left);
         }
         return maxLength;
     }
