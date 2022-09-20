@@ -12,6 +12,6 @@ public class SingleLinkListNode {
 
   @Override
   public String toString() {
-    return this.val + "->" + (this.next != null ? this.next.toString() : "");
+    return this.val + "->" + (this.next != null ? this.next.toString() : "null");
   }
 }
