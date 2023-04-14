@@ -13,11 +13,6 @@
     <name>leetcode</name>
     <description>题集</description>
 
-
-    <dependencies>
-
-    </dependencies>
-
     <build>
         <plugins>
             <plugin>
