@@ -27,68 +27,68 @@ package com.sylvanas.leetcode.medium;
  */
 public class TwoSum {
 
-    public static ListNode addTwoNumbers(ListNode l1, ListNode l2) {
-        if (l1 == null) {
-            return l2;
-        }
-        if (l2 == null) {
-            return l1;
-        }
-        ListNode result = new ListNode(0);
-        ListNode head = result;
-        int carry = 0;
-        while (l1 != null || l2 != null) {
-            int value1 = l1 != null ? l1.val : 0;
-            int value2 = l2 != null ? l2.val : 0;
+  public static ListNode addTwoNumbers(ListNode l1, ListNode l2) {
+    if (l1 == null) {
+      return l2;
+    }
+    if (l2 == null) {
+      return l1;
+    }
+    ListNode result = new ListNode(0);
+    ListNode head = result;
+    int carry = 0;
+    while (l1 != null || l2 != null) {
+      int value1 = l1 != null ? l1.val : 0;
+      int value2 = l2 != null ? l2.val : 0;
 
-            int sum = value1 + value2 + carry;
-            carry = 0;
-            if (sum >= 10) {
-                carry = sum / 10;
-                sum = sum % 10;
-            }
-            result.val = sum;
+      int sum = value1 + value2 + carry;
+      carry = 0;
+      if (sum >= 10) {
+        carry = sum / 10;
+        sum = sum % 10;
+      }
+      result.val = sum;
 
 
-            l1 = l1 != null ? l1.next : null;
-            l2 = l2 != null ? l2.next : null;
+      l1 = l1 != null ? l1.next : null;
+      l2 = l2 != null ? l2.next : null;
 
-            if (l1 != null || l2 != null) {
-                result.next = new ListNode(0);
-                result = result.next;
-            } else if (carry > 0) {
-                result.next = new ListNode(1);
-            }
-        }
-        return head;
+      if (l1 != null || l2 != null) {
+        result.next = new ListNode(0);
+        result = result.next;
+      } else if (carry > 0) {
+        result.next = new ListNode(1);
+      }
+    }
+    return head;
+  }
+
+  static class ListNode {
+    int val;
+    ListNode next;
+
+    ListNode(int val) {
+      this.val = val;
     }
 
-    static class ListNode {
-        int val;
-        ListNode next;
-
-        ListNode(int val) {
-            this.val = val;
-        }
-
-        ListNode(int val, ListNode next) {
-            this.val = val;
-            this.next = next;
-        }
-
-        @Override
-        public String toString() {
-            return this.val + "" + (next != null ? next.toString() : "");
-        }
+    ListNode(int val, ListNode next) {
+      this.val = val;
+      this.next = next;
     }
 
-    public static void main(String[] args) {
-        System.out.println(Long.MAX_VALUE);
-
-
-        ListNode l1 = new ListNode(2, new ListNode(4, new ListNode(3)));
-        ListNode l2 = new ListNode(5, new ListNode(6, new ListNode(4)));
-        System.out.println(addTwoNumbers(l1, l2));
+    @Override
+    public String toString() {
+      return this.val + "" + (next != null ? next.toString() : "");
     }
+  }
+
+  public static void main(String[] args) {
+    System.out.println(Long.MAX_VALUE);
+
+
+    ListNode l1 = new ListNode(2, new ListNode(4, new ListNode(3)));
+    ListNode l2 = new ListNode(5, new ListNode(6, new ListNode(4)));
+    System.out.println(addTwoNumbers(l1, l2));
+  }
 
 }

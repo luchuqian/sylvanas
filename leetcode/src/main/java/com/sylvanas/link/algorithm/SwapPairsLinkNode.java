@@ -29,7 +29,6 @@ public class SwapPairsLinkNode {
 
   /**
    * n个节点一组反转链表
-   *
    */
   public static SingleLinkListNode swanN(SingleLinkListNode head, SingleLinkListNode preNode, int n) {
     if (head == null || head.next == null) {

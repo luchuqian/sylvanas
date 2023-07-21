@@ -1,6 +1,7 @@
 package com.sylvanas.leetcode.medium;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 给定一个字符串 s ，请你找出其中不含有重复字符的 最长子串 的长度。
@@ -35,30 +36,30 @@ import java.util.*;
  */
 public class MaxSubString {
 
-    public static int lengthOfLongestSubstring(String s) {
-        if (s == null) {
-            return 0;
-        }
-        if (s.length() <= 1) {
-            return s.length();
-        }
-        int left = 0;
-        int right = 0;
-        int maxLength = 0;
-        Map<Character, Integer> window = new HashMap<>();
-        while (right < s.length()) {
-            Character c = s.charAt(right++);
-            window.put(c, window.getOrDefault(c, 0) + 1);
-            while (window.get(c) > 1) {
-                Character d = s.charAt(left++);
-                window.put(d, window.getOrDefault(d, 0) - 1);
-            }
-            maxLength = Math.max(maxLength, right - left);
-        }
-        return maxLength;
+  public static int lengthOfLongestSubstring(String s) {
+    if (s == null) {
+      return 0;
     }
+    if (s.length() <= 1) {
+      return s.length();
+    }
+    int left = 0;
+    int right = 0;
+    int maxLength = 0;
+    Map<Character, Integer> window = new HashMap<>();
+    while (right < s.length()) {
+      Character c = s.charAt(right++);
+      window.put(c, window.getOrDefault(c, 0) + 1);
+      while (window.get(c) > 1) {
+        Character d = s.charAt(left++);
+        window.put(d, window.getOrDefault(d, 0) - 1);
+      }
+      maxLength = Math.max(maxLength, right - left);
+    }
+    return maxLength;
+  }
 
-    public static void main(String[] args) {
-        System.out.println(lengthOfLongestSubstring("au"));
-    }
+  public static void main(String[] args) {
+    System.out.println(lengthOfLongestSubstring("au"));
+  }
 }

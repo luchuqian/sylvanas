@@ -35,34 +35,34 @@ import java.util.Map;
 public class TwoSum {
 
 
-    public static int[] calcTwoSum(int[] nums, int target) {
-        for (int i = 0; i < nums.length - 1; i++) {
-            int remain = target - nums[i];
-            for (int j = i + 1; j < nums.length; j++) {
-                if (nums[j] == remain) {
-                    return new int[]{i, j};
-                }
-            }
+  public static int[] calcTwoSum(int[] nums, int target) {
+    for (int i = 0; i < nums.length - 1; i++) {
+      int remain = target - nums[i];
+      for (int j = i + 1; j < nums.length; j++) {
+        if (nums[j] == remain) {
+          return new int[]{i, j};
         }
-        return new int[]{};
+      }
     }
+    return new int[]{};
+  }
 
-    public static int[] calcTwoSumByHashTable(int[] nums, int target) {
-        Map<Integer, Integer> map = new HashMap<>();
-        for (int i = 0; i < nums.length; i++) {
-            int remain = target - nums[i];
-            if (map.containsKey(remain)) {
-                return new int[]{i, map.get(remain)};
-            }
-            map.put(nums[i], i);
-        }
-        return new int[]{};
+  public static int[] calcTwoSumByHashTable(int[] nums, int target) {
+    Map<Integer, Integer> map = new HashMap<>();
+    for (int i = 0; i < nums.length; i++) {
+      int remain = target - nums[i];
+      if (map.containsKey(remain)) {
+        return new int[]{i, map.get(remain)};
+      }
+      map.put(nums[i], i);
     }
+    return new int[]{};
+  }
 
-    public static void main(String[] args) {
-        int[] arrays = new int[]{2, 7, 1, 15};
-        int target = 9;
-        System.out.println(Arrays.toString(calcTwoSum(arrays, target)));
-        System.out.println(Arrays.toString(calcTwoSumByHashTable(arrays, target)));
-    }
+  public static void main(String[] args) {
+    int[] arrays = new int[]{2, 7, 1, 15};
+    int target = 9;
+    System.out.println(Arrays.toString(calcTwoSum(arrays, target)));
+    System.out.println(Arrays.toString(calcTwoSumByHashTable(arrays, target)));
+  }
 }
