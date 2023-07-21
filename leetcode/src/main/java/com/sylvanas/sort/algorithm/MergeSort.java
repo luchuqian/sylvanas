@@ -53,6 +53,14 @@ public class MergeSort {
   }
 
 
+  public void exerciseSort(int[] arr, int left, int right) {
+  }
+
+  public void exerciseMerge(int[] arr, int left, int middle, int right) {
+
+  }
+
+
   public static void main(String[] args) {
     int[] arr = new int[]{1, 2, 3, 7, 8, 5, 4};
     sort(arr);
