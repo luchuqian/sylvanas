@@ -24,7 +24,7 @@ public class LFUCacheDemo {
         lfu.get(3);      // 返回 3
         // cache=[3,1], cnt(3)=2, cnt(1)=2
         lfu.put(4, 4);   // 去除键 1 ，1 和 3 的 cnt 相同，但 1 最久未使用
-        // cache=[4,3], cnt(4)=1, cnt(3)=2
+        // cache=[4,3], cnt(4)=1, cnt(3)=2w
         lfu.get(1);      // 返回 -1（未找到）
         lfu.get(3);      // 返回 3
         // cache=[3,4], cnt(4)=1, cnt(3)=3
