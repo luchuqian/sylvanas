@@ -1,14 +1,20 @@
 package com.sylvanas;
 
 
-import java.io.FileDescriptor;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * 题目如下
@@ -24,137 +30,166 @@ import java.util.logging.Logger;
  * 写一段Java程序，尽可能快统计出每个年龄的用户各有多少人，将结果存储在result.txt
  */
 public class AgeGroup {
-    private Logger logger = Logger.getLogger("ageGroup");
-    /**
-     * 结果集
-     */
-    private Map<String, Integer> ageToCntMap = new ConcurrentHashMap<>();
-    /**
-     * 用来控制主线程什么时候可以结束
-     * 默认1000w
-     */
-    private CountDownLatch countDownLatch = new CountDownLatch(10000000);
-    /**
-     * 一个约数 表示文件的实际可读行
-     */
-    private AtomicInteger actualReadableLines = new AtomicInteger(10000000);
+  private Logger logger = Logger.getLogger("ageGroup");
+  /**
+   * 结果集
+   */
+  private Map<String, LongAdder> ageToCntMap = new ConcurrentHashMap<>();
+  /**
+   * 用来控制主线程什么时候可以结束
+   */
+  private CountDownLatch countDownLatch;
 
-    private ExecutorService executor = new ThreadPoolExecutor(10,
-            10,
-            0L,
-            TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<>(2000),
-            new NamedThreadFactory("age-group"),
-            (task, executor) -> logger.info("task is rejected!")
-    );
 
-    /**
-     * 整体处理流程: 多线程归并思想 把大数据量划分为小任务执行 传入共享变量 最后输出结果集合到文件
-     * 1. 默认1000w行是一个明确的数量 划分1000w行的区间
-     * a. 小于1000w行 会下发大量的空任务 每个任务需要自行防空 每一个计数任务如果检测到当前自己扫描处理的区间大于实际可读行数时 快速结束
-     * b. 如果超过1000w行 需要补充下发任务 同时降级到主线程扫描后续文件行 分发任务到子线程
-     * c. 刚好1000w行 理想情况
-     * 2. 单个区间1w行数据 下发每个区间的统计任务 1w是根据已知数据格式和内存安全保守估计的 机器资源越大 单个任务可以处理越大的区间 同时也可以开辟越多工作线程
-     * 3. 考虑不可控因素或者执行过程中的脏数据影响 每个区间的任务如果处理成功 都暂存一份至文件 同时会记录一份已处理的区间到另一个文件groupedRange.txt 重跑任务时可以快速获取已经执行过的结果 加速重跑的任务结果
-     * a. groupedRegion.txt 行数不会太大 n/10000的的行数 主要记录已经处理过的区间 每次任务启动优先加载该文件到内存中
-     * 4. 线程池保守估计初始化10个核心线程 0个非核心线程 2000个阻塞队列长度 下发的任务时区间值和随机文件句柄 同时只有10个核心线程再并发 10w数据在内存中分拣 防止疯狂的开辟线程导致内存溢出
-     * 5. 所有线程共享一个线程安全的map {@link this#ageToCntMap} 每个子任务处理完成时同时写入内存和写入文件groupedRange.txt
-     */
-    private void readFile(String filePath) throws IOException {
-        logger.info("starting to group file data...");
-        while (countDownLatch.getCount() > 0) {
-            executor.submit(() -> {
-                RandomAccessFile raf = null;
-                try {
-                    raf = new RandomAccessFile(filePath, "r");
-                } catch (FileNotFoundException e) {
-                   logger.info("read file error,",);
-                }
-                // 文件行指针
-                raf.seek(0);
-            });
+  private ExecutorService executor = new ThreadPoolExecutor(10,
+      10,
+      0L,
+      TimeUnit.MILLISECONDS,
+      new LinkedBlockingQueue<>(2000),
+      new NamedThreadFactory("age-group"),
+      (task, executor) -> logger.info("task is rejected!")
+  );
+
+
+  private void readFile(String filePath) throws FileNotFoundException, InterruptedException {
+    logger.info("starting to group file data...");
+    File file = new File(filePath);
+    long fileLength = file.length();
+    int regionSize = 1024 * 1024;
+    int batchNum = (int) Math.ceil(fileLength * 1.0 / regionSize);
+    countDownLatch = new CountDownLatch(batchNum);
+    int regionIndex = 0;
+    while (regionIndex < batchNum) {
+      regionRead(filePath, regionIndex++, regionSize);
+    }
+  }
+
+
+  private void regionRead(String filePath, int regionIndex, int regionSize) {
+    executor.submit(() -> {
+      try (RandomAccessFile raf = new RandomAccessFile(filePath, "r")) {
+        byte[] region = new byte[regionSize];
+        int posOffset = regionIndex * regionSize;
+        int actualSize = raf.read(region, posOffset, regionSize);
+        // 没有内容
+        if (actualSize < 0) {
+          logger.info("region is empty!");
+          return;
         }
+        // 清理多余空间
+        if (actualSize < regionSize) {
+          byte[] actualRegion = new byte[actualSize];
+          System.arraycopy(region, 0, actualRegion, 0, actualSize);
+          region = actualRegion;
+        }
+        // 处理文件块
+        extractRegionData(filePath, region, posOffset);
+      } catch (Exception e) {
+        logger.log(Level.WARNING, "read file error,region index is:" + regionIndex, e);
+      } finally {
+        // 不管任务是否真的执行完 都默认文件块被处理
+        countDownLatch.countDown();
+        logger.info("task finished!");
+      }
+    });
+  }
+
+  private void extractRegionData(String filePath, byte[] region, int posOffset) {
+    boolean isFinalRead = false;
+    try (RandomAccessFile raf = new RandomAccessFile(filePath, "r")) {
+      int start = 0;
+      while (true) {
+        //
+        int newLineIndex = indexOfLineSeparator(region, start);
+        // 没有找到换行符说明可能只有一行 也可能当前是最后一行的前一行 读取后计数并推出
+        if (newLineIndex < 0) {
+          isFinalRead = true;
+        }
+        // 偏转指针到找到的行尾
+        raf.seek(posOffset + newLineIndex + 1);
+        String data = raf.readLine();
+        data = new String(data.getBytes(StandardCharsets.ISO_8859_1));
+        count(data);
+        start = newLineIndex + 1;
+        if (isFinalRead) {
+          break;
+        }
+      }
+    } catch (Exception e) {
+      logger.log(Level.WARNING, "extract region error", e);
     }
+  }
 
-
-    /**
-     * 1. 尽可能快
-     * 2. 1000w数据 内存有压力 需分批
-     * 2.1 分批减缓内存压力
-     * 2.2 并行加快归类
-     * 2.3 同一个文件
-     * 3. hash表存结果 单次写道
-     */
-    private void ageGroup() {
-
-
+  /**
+   * 查找一个region从指定位置之后的换行符位置
+   */
+  private int indexOfLineSeparator(byte[] region, int start) {
+    for (int i = start; i < region.length; i++) {
+      if (region[i] == "\n".getBytes()[0]) {
+        return i;
+      }
     }
+    return -1;
+  }
 
-    /**
-     * 把归并后的总结果集合 写入result.txt
-     */
-    private void writeFile() {
-
+  private void count(String data) {
+    if (data == null || data.length() == 0) {
+      return;
     }
+    List<String> lineResult = Arrays.stream(data.split(" "))
+        .filter(ele -> !"".equals(ele) && !"null".equals(ele))
+        .collect(Collectors.toList());
 
-    public static void main(String[] args) throws IOException {
-        // 这里使用文件的绝对路径
-        new AgeGroup().readFile("D:\\code-from-github\\leetcode\\src\\main\\java\\com\\sylvanas\\info.txt");
+    String age = lineResult.size() == 3 ? lineResult.get(2) : "unknown";
+    LongAdder cnt = ageToCntMap.get(age);
+    if (cnt == null) {
+      cnt = new LongAdder();
+      cnt.increment();
+      ageToCntMap.put(age, cnt);
+    } else {
+      cnt.increment();
     }
+  }
+
+
+  private void ageGroup(String parentPath, String sourceFileName, String destFileName) throws FileNotFoundException, InterruptedException {
+    readFile(parentPath + sourceFileName);
+    // 等待所有任务执行完成后再执行结果输出
+    countDownLatch.await();
+    writeFile(parentPath + destFileName);
+  }
+
+  /**
+   * 把归并后的总结果集合 写入result.txt
+   */
+  private void writeFile(String filePath) {
+
+  }
+
+  public static void main(String[] args) throws IOException, InterruptedException {
+    String parentPath = "/Users/yqg/code/sylvanas/leetcode/src/main/java/com/sylvanas/";
+    // 文件的绝对路径
+    new AgeGroup().ageGroup(parentPath, "info.txt", "result.txt");
+  }
 
 }
 
-class User {
-    private String id;
-    private String name;
-    private Integer age;
-
-
-    public User(String id, String name, Integer age) {
-        this.id = id;
-        this.name = name;
-        this.age = age;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Integer getAge() {
-        return age;
-    }
-
-    public void setAge(Integer age) {
-        this.age = age;
-    }
-}
 
 class NamedThreadFactory implements ThreadFactory {
-    private final ThreadGroup group;
-    private final AtomicInteger threadNumber;
-    private final String namePrefix;
+  private final ThreadGroup group;
+  private final AtomicInteger threadNumber;
+  private final String namePrefix;
 
 
-    public NamedThreadFactory(String namePrefix) {
-        this.threadNumber = new AtomicInteger(1);
-        SecurityManager s = System.getSecurityManager();
-        this.group = s != null ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-        this.namePrefix = namePrefix;
-    }
+  public NamedThreadFactory(String namePrefix) {
+    this.threadNumber = new AtomicInteger(1);
+    SecurityManager s = System.getSecurityManager();
+    this.group = s != null ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+    this.namePrefix = namePrefix;
+  }
 
-    public Thread newThread(Runnable task) {
-        return new Thread(this.group, task, this.namePrefix + "-thread-" + this.threadNumber.getAndIncrement(), 0L);
-    }
+  public Thread newThread(Runnable task) {
+    return new Thread(this.group, task, this.namePrefix + "-thread-" + this.threadNumber.getAndIncrement(), 0L);
+  }
+
 }
