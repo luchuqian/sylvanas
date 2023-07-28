@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -31,7 +31,7 @@ public class AgeGroup {
   /**
    * 结果集
    */
-  private Map<String, LongAdder> ageToCntMap = new ConcurrentHashMap<>();
+  private Map<String, AtomicLong> ageToCntMap = new ConcurrentHashMap<>();
   /**
    * 用来控制主线程什么时候可以结束
    */
@@ -131,6 +131,9 @@ public class AgeGroup {
     return -1;
   }
 
+  /**
+   * 计算文件行
+   */
   private int countRegionLines(byte[] region) {
     int lineNo = 0;
     for (int i = 0; i < region.length; i++) {
@@ -141,6 +144,9 @@ public class AgeGroup {
     return lineNo;
   }
 
+  /**
+   * 累加结果
+   */
   private void count(String data) {
     if (data == null || data.length() == 0) {
       return;
@@ -148,15 +154,15 @@ public class AgeGroup {
     List<String> lineResult = Arrays.stream(data.split(" "))
         .filter(ele -> !"".equals(ele) && !"null".equals(ele))
         .collect(Collectors.toList());
-
+    // age为空时 归类到unknown
     String age = lineResult.size() == 3 ? lineResult.get(2) : "unknown";
-    LongAdder cnt = ageToCntMap.get(age);
+    AtomicLong cnt = ageToCntMap.get(age);
     if (cnt == null) {
-      cnt = new LongAdder();
-      cnt.increment();
+      cnt = new AtomicLong();
+      cnt.incrementAndGet();
       ageToCntMap.put(age, cnt);
     } else {
-      cnt.increment();
+      cnt.incrementAndGet();
     }
   }
 
