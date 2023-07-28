@@ -1,10 +1,7 @@
 package com.sylvanas;
 
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -55,7 +52,7 @@ public class AgeGroup {
     logger.info("starting to group file data...");
     File file = new File(filePath);
     long fileLength = file.length();
-    int regionSize = 1024 * 1024;
+    int regionSize = 64;
     int batchNum = (int) Math.ceil(fileLength * 1.0 / regionSize);
     countDownLatch = new CountDownLatch(batchNum);
     int regionIndex = 0;
@@ -69,8 +66,9 @@ public class AgeGroup {
     executor.submit(() -> {
       try (RandomAccessFile raf = new RandomAccessFile(filePath, "r")) {
         byte[] region = new byte[regionSize];
-        int posOffset = regionIndex * regionSize;
-        int actualSize = raf.read(region, posOffset, regionSize);
+        long posOffset = (long) regionIndex * regionSize;
+        raf.seek(posOffset);
+        int actualSize = raf.read(region);
         // 没有内容
         if (actualSize < 0) {
           logger.info("region is empty!");
@@ -94,42 +92,53 @@ public class AgeGroup {
     });
   }
 
-  private void extractRegionData(String filePath, byte[] region, int posOffset) {
-    boolean isFinalRead = false;
+  private void extractRegionData(String filePath, byte[] region, long posOffset) {
     try (RandomAccessFile raf = new RandomAccessFile(filePath, "r")) {
-      int start = 0;
-      while (true) {
-        //
-        int newLineIndex = indexOfLineSeparator(region, start);
-        // 没有找到换行符说明可能只有一行 也可能当前是最后一行的前一行 读取后计数并推出
-        if (newLineIndex < 0) {
-          isFinalRead = true;
-        }
-        // 偏转指针到找到的行尾
-        raf.seek(posOffset + newLineIndex + 1);
-        String data = raf.readLine();
-        data = new String(data.getBytes(StandardCharsets.ISO_8859_1));
-        count(data);
-        start = newLineIndex + 1;
-        if (isFinalRead) {
-          break;
-        }
+      int firstNewLineIndex = findRegionFirstLineEndIndex(region);
+      // 可能是最后一行 可能是文件只有一行
+      if (firstNewLineIndex < -1) {
+        readLine(raf);
+        return;
+      }
+      int lineNo = countRegionLines(region);
+      // 移到区间开始处
+      raf.seek(posOffset + firstNewLineIndex + 1);
+      while (lineNo-- > 0) {
+        readLine(raf);
       }
     } catch (Exception e) {
       logger.log(Level.WARNING, "extract region error", e);
     }
   }
 
+  private void readLine(RandomAccessFile raf) throws IOException {
+    String data = raf.readLine();
+    if (data != null) {
+      data = new String(data.getBytes(StandardCharsets.ISO_8859_1));
+      count(data);
+    }
+  }
+
   /**
    * 查找一个region从指定位置之后的换行符位置
    */
-  private int indexOfLineSeparator(byte[] region, int start) {
-    for (int i = start; i < region.length; i++) {
+  private int findRegionFirstLineEndIndex(byte[] region) {
+    for (int i = 0; i < region.length; i++) {
       if (region[i] == "\n".getBytes()[0]) {
         return i;
       }
     }
     return -1;
+  }
+
+  private int countRegionLines(byte[] region) {
+    int lineNo = 0;
+    for (int i = 0; i < region.length; i++) {
+      if (region[i] == "\n".getBytes()[0]) {
+        lineNo++;
+      }
+    }
+    return lineNo;
   }
 
   private void count(String data) {
@@ -152,18 +161,41 @@ public class AgeGroup {
   }
 
 
-  private void ageGroup(String parentPath, String sourceFileName, String destFileName) throws FileNotFoundException, InterruptedException {
+  private void ageGroup(String parentPath, String sourceFileName, String destFileName) throws IOException, InterruptedException {
     readFile(parentPath + sourceFileName);
     // 等待所有任务执行完成后再执行结果输出
     countDownLatch.await();
+    executor.shutdown();
     writeFile(parentPath + destFileName);
   }
 
   /**
    * 把归并后的总结果集合 写入result.txt
    */
-  private void writeFile(String filePath) {
-
+  private void writeFile(String filePath) throws IOException {
+    File file = new File(filePath);
+    File parent = file.getParentFile();
+    if (!parent.exists()) {
+      parent.mkdirs();
+      file.createNewFile();
+    }
+    try (FileOutputStream outputStream = new FileOutputStream(file)) {
+      outputStream.write("age\tcnt\n".getBytes(StandardCharsets.UTF_8));
+      this.ageToCntMap.forEach((age, cnt) -> {
+        // 表头不输出
+        if ("age".equals(age)) {
+          return;
+        }
+        String content = age + "\t" + cnt + "\n";
+        try {
+          outputStream.write(content.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+          logger.log(Level.WARNING, "write key error,key:" + age + ",cnt:" + cnt, e);
+        }
+      });
+    } catch (Exception e) {
+      logger.log(Level.WARNING, "write file error", e);
+    }
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
