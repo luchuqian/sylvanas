@@ -3,12 +3,10 @@ package com.sylvanas;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -31,7 +29,9 @@ public class AgeGroup {
   /**
    * 结果集
    */
-  private Map<String, AtomicLong> ageToCntMap = new ConcurrentHashMap<>();
+  private Map<String, LongAdder> ageToCntMap = new ConcurrentHashMap<>();
+  List<Future<Map<String, LongAdder>>> futureList = new ArrayList<>();
+
   /**
    * 用来控制主线程什么时候可以结束
    */
@@ -48,22 +48,24 @@ public class AgeGroup {
   );
 
 
-  private void readFile(String filePath) throws FileNotFoundException, InterruptedException {
+  private void readFile(String filePath) throws FileNotFoundException, InterruptedException, ExecutionException {
     logger.info("starting to group file data...");
     File file = new File(filePath);
     long fileLength = file.length();
-    int regionSize = 64;
+    int regionSize = 1024;
     int batchNum = (int) Math.ceil(fileLength * 1.0 / regionSize);
     countDownLatch = new CountDownLatch(batchNum);
     int regionIndex = 0;
     while (regionIndex < batchNum) {
-      regionRead(filePath, regionIndex++, regionSize);
+      futureList.add(regionRead(filePath, regionIndex++, regionSize));
     }
+
   }
 
 
-  private void regionRead(String filePath, int regionIndex, int regionSize) {
-    executor.submit(() -> {
+  private Future<Map<String, LongAdder>> regionRead(String filePath, int regionIndex, int regionSize) throws ExecutionException, InterruptedException {
+    return executor.submit(() -> {
+      Map<String, LongAdder> subAgeToCntMap = new HashMap<>();
       try (RandomAccessFile raf = new RandomAccessFile(filePath, "r")) {
         byte[] region = new byte[regionSize];
         long posOffset = (long) regionIndex * regionSize;
@@ -72,7 +74,7 @@ public class AgeGroup {
         // 没有内容
         if (actualSize < 0) {
           logger.info("region is empty!");
-          return;
+          return Collections.emptyMap();
         }
         // 清理多余空间
         if (actualSize < regionSize) {
@@ -81,7 +83,7 @@ public class AgeGroup {
           region = actualRegion;
         }
         // 处理文件块
-        extractRegionData(filePath, region, posOffset);
+        extractRegionData(subAgeToCntMap, filePath, region, posOffset);
       } catch (Exception e) {
         logger.log(Level.WARNING, "read file error,region index is:" + regionIndex, e);
       } finally {
@@ -89,33 +91,34 @@ public class AgeGroup {
         countDownLatch.countDown();
         logger.info("task finished!");
       }
+      return subAgeToCntMap;
     });
   }
 
-  private void extractRegionData(String filePath, byte[] region, long posOffset) {
+  private void extractRegionData(Map<String, LongAdder> ageToCntMap, String filePath, byte[] region, long posOffset) {
     try (RandomAccessFile raf = new RandomAccessFile(filePath, "r")) {
       int firstNewLineIndex = findRegionFirstLineEndIndex(region);
       // 可能是最后一行 可能是文件只有一行
       if (firstNewLineIndex < -1) {
-        readLine(raf);
+        readLine(ageToCntMap, raf);
         return;
       }
       int lineNo = countRegionLines(region);
       // 移到区间开始处
       raf.seek(posOffset + firstNewLineIndex + 1);
       while (lineNo-- > 0) {
-        readLine(raf);
+        readLine(ageToCntMap, raf);
       }
     } catch (Exception e) {
       logger.log(Level.WARNING, "extract region error", e);
     }
   }
 
-  private void readLine(RandomAccessFile raf) throws IOException {
+  private void readLine(Map<String, LongAdder> ageToCntMap, RandomAccessFile raf) throws IOException {
     String data = raf.readLine();
     if (data != null) {
       data = new String(data.getBytes(StandardCharsets.ISO_8859_1));
-      count(data);
+      count(ageToCntMap, data);
     }
   }
 
@@ -147,7 +150,7 @@ public class AgeGroup {
   /**
    * 累加结果
    */
-  private void count(String data) {
+  private void count(Map<String, LongAdder> ageToCntMap, String data) {
     if (data == null || data.length() == 0) {
       return;
     }
@@ -156,21 +159,35 @@ public class AgeGroup {
         .collect(Collectors.toList());
     // age为空时 归类到unknown
     String age = lineResult.size() == 3 ? lineResult.get(2) : "unknown";
-    AtomicLong cnt = ageToCntMap.get(age);
+    LongAdder cnt = ageToCntMap.get(age);
     if (cnt == null) {
-      cnt = new AtomicLong();
-      cnt.incrementAndGet();
+      cnt = new LongAdder();
+      cnt.increment();
       ageToCntMap.put(age, cnt);
     } else {
-      cnt.incrementAndGet();
+      cnt.increment();
     }
   }
 
 
-  private void ageGroup(String parentPath, String sourceFileName, String destFileName) throws IOException, InterruptedException {
+  private void ageGroup(String parentPath, String sourceFileName, String destFileName) throws IOException, InterruptedException, ExecutionException {
     readFile(parentPath + sourceFileName);
     // 等待所有任务执行完成后再执行结果输出
     countDownLatch.await();
+    futureList.forEach(future -> {
+      try {
+        Map<String, LongAdder> map = future.get();
+        map.forEach((age, cnt) -> {
+          LongAdder result = this.ageToCntMap.getOrDefault(age, new LongAdder());
+          result.add(cnt.longValue());
+          this.ageToCntMap.put(age, result);
+        });
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      } catch (ExecutionException e) {
+        e.printStackTrace();
+      }
+    });
     executor.shutdown();
     writeFile(parentPath + destFileName);
   }
@@ -204,7 +221,7 @@ public class AgeGroup {
     }
   }
 
-  public static void main(String[] args) throws IOException, InterruptedException {
+  public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
     String parentPath = "/Users/yqg/code/sylvanas/leetcode/src/main/java/com/sylvanas/";
     // 文件的绝对路径
     new AgeGroup().ageGroup(parentPath, "info.txt", "result.txt");
