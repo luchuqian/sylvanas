@@ -2,16 +2,19 @@ package com.sylvanas.leetcode.hard;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class NSum {
 
   public static List<List<Integer>> nSum(int[] nums, int n, int start, int target) {
     int sz = nums.length;
-    List<List<Integer>> resultList = new ArrayList<>();
     // 至少是 2Sum，且数组大小不应该小于 n
-    if (n < 2 || sz < n) return resultList;
+    if (n < 2 || sz < n) {
+      return Collections.emptyList();
+    }
     Arrays.sort(nums);
+    List<List<Integer>> resultList = new ArrayList<>();
     // 2Sum 是 base case
     if (n == 2) {
       // 双指针那一套操作
