@@ -2,7 +2,6 @@ package com.sylvanas.leetcode.medium;
 
 import java.util.Collections;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Stack;
 
 public class DecodeString {
