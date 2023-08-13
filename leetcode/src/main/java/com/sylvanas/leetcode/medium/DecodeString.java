@@ -5,60 +5,61 @@ import java.util.LinkedList;
 import java.util.Stack;
 
 public class DecodeString {
-    private static Integer startIndex = 0;
 
-    public static String decodeString(String s) {
-        Stack<String> stack = new Stack<>();
-        while (startIndex < s.length()) {
-            char cur = s.charAt(startIndex);
-            if (Character.isDigit(cur)) {
-                String repeatNum = getDigital(s);
-                stack.push(repeatNum);
-            } else if (Character.isLetter(cur) || cur == '[') {
-                stack.push(cur + "");
-                startIndex++;
+    public String decodeString(String s) {
+        StringBuilder res = new StringBuilder();
+        int multi = 0;
+        Stack<Integer> factorStack = new Stack<>();
+        Stack<String> eleStack = new Stack<>();
+        for (Character c : s.toCharArray()) {
+            if (c == '[') {
+                factorStack.push(multi);
+                eleStack.push(res.toString());
+                multi = 0;
+                res = new StringBuilder();
+            } else if (c == ']') {
+                StringBuilder tmp = new StringBuilder();
+                int curTop = factorStack.pop();
+                for (int i = 0; i < curTop; i++) {
+                    tmp.append(res);
+                }
+                res = new StringBuilder(eleStack.pop() + tmp);
+            } else if (c >= '0' && c <= '9') {
+                multi = multi * 10 + Integer.parseInt(c + "");
             } else {
-                startIndex++;
-                LinkedList<String> sub = new LinkedList<>();
-                while (!"[".equals(stack.peek())) {
-                    sub.addLast(stack.pop());
-                }
-                Collections.reverse(sub);
-                stack.pop();
-                int repeatNum = Integer.parseInt(stack.pop());
-
-                StringBuilder subStr = new StringBuilder();
-                String tempStr = getString(sub);
-                while (repeatNum-- > 0) {
-                    subStr.append(tempStr);
-                }
-                stack.push(subStr.toString());
+                res.append(c);
             }
         }
-        String result = "";
-        while (!stack.isEmpty()) {
-            result = stack.pop() + result;
-        }
-        return result;
+        return res.toString();
     }
 
-    public static String getDigital(String s) {
-        StringBuilder sb = new StringBuilder();
-        while (Character.isDigit(s.charAt(startIndex))) {
-            sb.append(s.charAt(startIndex++));
-        }
-        return sb.toString();
+    public String decodeString2(String s) {
+        return dfs(s, 0)[0];
     }
 
-    public static String getString(LinkedList<String> v) {
-        StringBuffer ret = new StringBuffer();
-        for (String s : v) {
-            ret.append(s);
+    private String[] dfs(String s, int index) {
+        StringBuilder res = new StringBuilder();
+        int multi = 0;
+        while (index < s.length()) {
+            if (s.charAt(index) >= '0' && s.charAt(index) <= '9'){
+                multi = multi * 10 + Integer.parseInt(String.valueOf(s.charAt(index)));
+            }
+            else if (s.charAt(index) == '[') {
+                String[] tmp = dfs(s, index + 1);
+                index = Integer.parseInt(tmp[0]);
+                while (multi > 0) {
+                    res.append(tmp[1]);
+                    multi--;
+                }
+            } else if (s.charAt(index) == ']') {
+                return new String[]{String.valueOf(index), res.toString()};
+            } else {
+                res.append(s.charAt(index));
+            }
+            index++;
         }
-        return ret.toString();
+        return new String[]{res.toString()};
     }
 
-    public static void main(String[] args) {
-        System.out.println(decodeString("3[a2[c]]"));
-    }
+
 }
