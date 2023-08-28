@@ -28,7 +28,7 @@ public class DeleteKNodeOfLinkNode {
             h1 = h1.next;
         }
         ListNode result = head;
-        // 遍历完后正好走了n步 假设链表长度为k 则链表剩余k-n个长度
+        // 遍历完后正好走了k步 假设链表长度为n 则链表剩余n-k个长度
         while (h1 != null) {
             h1 = h1.next;
             result = result.next;

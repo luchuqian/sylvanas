@@ -21,14 +21,15 @@ public class LongestConsecutiveSequence {
         }
         Map<Integer, Integer> startToLengthMap = new HashMap<>();
         for (int n : nums) {
-            if (!numSet.contains(n - 1)) {
-                int max = 1;
-                while (numSet.contains(n + 1)) {
-                    n++;
-                    max++;
-                }
-                startToLengthMap.put(n, max);
+            if (numSet.contains(n - 1)) {
+                continue;
             }
+            int max = 1;
+            while (numSet.contains(n + 1)) {
+                n++;
+                max++;
+            }
+            startToLengthMap.put(n, max);
         }
         return startToLengthMap.values()
                 .stream()

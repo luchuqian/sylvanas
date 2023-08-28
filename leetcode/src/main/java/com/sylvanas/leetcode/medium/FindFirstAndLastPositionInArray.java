@@ -27,9 +27,6 @@ public class FindFirstAndLastPositionInArray {
         }
         // 检查出界情况
         if (left >= nums.length || nums[left] != target) {
-
-
-
             return -1;
         }
         return left;

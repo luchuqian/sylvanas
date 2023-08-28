@@ -117,7 +117,8 @@ public class ConsistentHashingWithVirtualNode {
 
         System.out.println("===============删除节点==================");
         removeGroup("192.168.0.5:111");
-        for (int weight = 0; weight < 100000; weight++) {
+        for (int weight =
+             0; weight < 100000; weight++) {
             String group = getServer(Integer.toString(weight));
             if (resMap.containsKey(group)) {
                 resMap.get(group).increment();
