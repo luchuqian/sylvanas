@@ -1,5 +1,8 @@
 package com.sylvanas.leetcode.medium;
 
+/**
+ * https://leetcode.cn/problems/maximum-product-subarray/
+ */
 public class MaxSubArray {
 
     public int maxProduct(int[] nums) {
