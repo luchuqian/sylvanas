@@ -53,23 +53,16 @@ public class QuickSort {
         if (left > right) {
             return;
         }
-        int l = left;
-        int r = right;
         int base = arr[left];
-        while (l < r) {
-            while (l < r && arr[r] >= base) {
-                r--;
-            }
-            while (l < r && arr[l] <= base) {
-                l++;
-            }
-            if (l < r) {
-                swap(arr, l, r);
+        int baseIndex = left;
+        for (int i = baseIndex + 1; i <= right; i++) {
+            if (arr[i] < base) {
+                swap(arr, i, ++baseIndex);
             }
         }
-        swap(arr, left, l);
-        exercise(arr, left, l - 1);
-        exercise(arr, l + 1, right);
+        swap(arr, left, baseIndex);
+        exercise(arr, left, baseIndex - 1);
+        exercise(arr, baseIndex + 1, right);
     }
 
 

@@ -56,13 +56,14 @@ public class SingleLinkMeagerSort {
         if (head == null || head.next == null) {
             return head;
         }
-        Node middle = exerciseFindMiddle(head);
-        Node rightHead = middle.next;
-        middle.next = null;
         Node leftHead = head;
-        Node leftAfterSort = exerciseSort(leftHead);
-        Node rightAfterSort = exerciseSort(rightHead);
-        return exerciseMerge(leftAfterSort, rightAfterSort);
+        Node middleNode = exerciseFindMiddle(leftHead);
+        Node rightHead = middleNode.next;
+        middleNode.next = null;
+        exerciseSort(leftHead);
+        exerciseSort(rightHead);
+        exerciseMerge(leftHead, rightHead);
+        return head;
     }
 
 
@@ -71,8 +72,8 @@ public class SingleLinkMeagerSort {
             return head;
         }
         Node slow = head;
-        Node fast = slow.next;
-        while (slow != null && fast != null && fast.next != null) {
+        Node fast = head.next;
+        while (slow != null && fast != null && head.next != null) {
             slow = slow.next;
             fast = fast.next.next;
         }
@@ -86,28 +87,32 @@ public class SingleLinkMeagerSort {
         if (rightHead == null) {
             return leftHead;
         }
-        Node resultNode = new Node(null, 0);
-        Node resultHead = resultNode;
+        Node head = new Node(-1);
+        Node result = head;
         while (leftHead != null && rightHead != null) {
             int leftVal = leftHead.val;
             int rightVal = rightHead.val;
-            if (leftVal > rightVal) {
-                resultNode.next = new Node(null, leftVal);
+            if (leftVal < rightVal) {
+                head.next = leftHead;
                 leftHead = leftHead.next;
             } else {
-                resultNode.next = new Node(null, rightVal);
+                head.next = rightHead;
                 rightHead = rightHead.next;
             }
-            resultNode = resultNode.next;
+            head = head.next;
         }
-        resultNode.next = leftHead == null ? rightHead : leftHead;
-        return resultHead.next;
+        head.next = leftHead != null ? leftHead : rightHead;
+        return result.next;
     }
 }
 
 class Node {
     public Node next;
     public int val;
+
+    public Node(int val) {
+        this.val = val;
+    }
 
     public Node(Node next, int val) {
         this.next = next;

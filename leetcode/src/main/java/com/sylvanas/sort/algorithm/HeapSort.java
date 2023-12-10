@@ -81,7 +81,7 @@ public class HeapSort {
     public static void exerciseBuildMaxTopHeap(int[] arr) {
         for (int i = 0; i < arr.length; i++) {
             int curIndex = i;
-            int fatherIndex = (curIndex - 1) / 2;
+            int fatherIndex = (i - 1) / 2;
             while (arr[curIndex] > arr[fatherIndex]) {
                 swap(arr, curIndex, fatherIndex);
                 curIndex = fatherIndex;
@@ -93,20 +93,26 @@ public class HeapSort {
     private static void exerciseHeapify(int[] arr, int curIndex, int size) {
         int leftIndex = 2 * curIndex + 1;
         int rightIndex = 2 * curIndex + 2;
-        while (leftIndex < size) {
+        while (rightIndex < size) {
             int largestIndex;
             if (rightIndex < size && arr[rightIndex] > arr[leftIndex]) {
                 largestIndex = rightIndex;
             } else {
                 largestIndex = leftIndex;
             }
-            if (arr[largestIndex] > arr[curIndex]) {
-                swap(arr, curIndex, largestIndex);
+            if (arr[largestIndex] < arr[curIndex]) {
+                largestIndex = curIndex;
             }
+            if (largestIndex == curIndex) {
+                break;
+            }
+            swap(arr, curIndex, largestIndex);
             curIndex = largestIndex;
+
             leftIndex = 2 * curIndex + 1;
             rightIndex = 2 * curIndex + 2;
         }
+
     }
 
 }
